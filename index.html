@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prueba de Hipótesis - Campana de Gauss</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            background-color: #1e1e1e;
+            color: #ffffff;
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+        }
+        input {
+            background-color: #333;
+            color: #ffffff;
+            border: 1px solid #555;
+            padding: 8px;
+            margin: 5px;
+            width: 80%;
+            max-width: 300px;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        canvas {
+            background-color: #252525;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h2>Prueba de Hipótesis - Campana de Gauss</h2>
+    <label for="datos">Ingrese los datos separados por comas:</label>
+    <input type="text" id="datos" placeholder="Ej: 45,50,55,60">
+    <br>
+    <label for="media">Ingrese la media hipotética:</label>
+    <input type="text" id="media" placeholder="Ej: 50">
+    <br>
+    <button onclick="realizarPrueba()">Realizar Prueba</button>
+    <p id="resultado"></p>
+    <canvas id="grafico"></canvas>
+
+    <script>
+        function realizarPrueba() {
+            let datosInput = document.getElementById("datos").value;
+            let mu = parseFloat(document.getElementById("media").value);
+            let datos = datosInput.split(',').map(Number);
+            
+            if (datos.length === 0 || isNaN(mu)) {
+                alert("Por favor, ingrese datos válidos.");
+                return;
+            }
+
+            let mediaMuestral = datos.reduce((a, b) => a + b, 0) / datos.length;
+            let desviacion = Math.sqrt(datos.map(x => Math.pow(x - mediaMuestral, 2)).reduce((a, b) => a + b, 0) / (datos.length - 1));
+            let t_stat = (mediaMuestral - mu) / (desviacion / Math.sqrt(datos.length));
+            let p_value = 1 - Math.abs(t_stat) / 10;
+            document.getElementById("resultado").innerText = `Estadístico t: ${t_stat.toFixed(4)}, Valor p: ${p_value.toFixed(4)}`;
+
+            let start = mediaMuestral - 4 * desviacion;
+            let end = mediaMuestral + 4 * desviacion;
+            let steps = 100;
+            let stepSize = (end - start) / steps;
+            let dataPoints = [];
+            let criticalValue = mediaMuestral + 1.96 * desviacion;
+            
+            for (let i = 0; i <= steps; i++) {
+                let xVal = start + i * stepSize;
+                let yVal = (1 / (desviacion * Math.sqrt(2 * Math.PI))) * Math.exp(-Math.pow(xVal - mediaMuestral, 2) / (2 * Math.pow(desviacion, 2)));
+                dataPoints.push({ x: xVal, y: yVal });
+            }
+            
+            let ctx = document.getElementById("grafico").getContext("2d");
+            if (window.miGrafico) {
+                window.miGrafico.destroy();
+            }
+            
+            window.miGrafico = new Chart(ctx, {
+                type: "line",
+                data: {
+                    datasets: [
+                        {
+                            label: "Campana de Gauss",
+                            data: dataPoints,
+                            borderColor: "#4CAF50",
+                            fill: false,
+                            tension: 0.1
+                        },
+                        {
+                            label: "Región de Rechazo",
+                            data: dataPoints.filter(p => p.x > criticalValue),
+                            borderColor: "red",
+                            backgroundColor: "rgba(255, 0, 0, 0.2)",
+                            fill: true,
+                            tension: 0.1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: { 
+                            type: 'linear', 
+                            title: { display: true, text: "Valor", color: "#ffffff" },
+                            ticks: { color: "#ffffff" }
+                        },
+                        y: { 
+                            title: { display: true, text: "Densidad", color: "#ffffff" },
+                            ticks: { color: "#ffffff" }
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
+
